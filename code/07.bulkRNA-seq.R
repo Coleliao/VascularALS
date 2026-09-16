@@ -137,8 +137,16 @@ saveRDS(data,'./GSE137810_count_meta_ctx.rds')
 #gene <- c('COL1A1','COL1A2','DCN','LUM','THBS2','CLDN1','GADL1','BICC1','TIAM1') 
 gene <- c('COL1A1','COL1A2','DCN','LUM','THBS2','CLDN1','GADL1')
 
-df <- count[gene,] %>% t() %>% as.data.frame()
-df$disease <- meta_ctx[colnames(count),'disease state']
+## normalization to remove the sequencing depth difference 
+library(DESeq2)
+meta_ctx$disease_state <- meta_ctx$`disease state`
+count <- na.omit(count)
+dds <- DESeqDataSetFromMatrix(countData = count, colData = meta_ctx, design = ~ disease_state)
+dds <- estimateSizeFactors(dds)
+norm_counts <- counts(dds, normalized = TRUE)
+
+df <- norm_counts[gene,] %>% t() %>% as.data.frame()
+df$disease <- meta_ctx[colnames(norm_counts),'disease state']
 
 df2 <- reshape2::melt(df, id.vars = c('disease'), variable.name = 'gene', value.name = 'expression')
 df2$gene <- factor(df2$gene, level = gene)
